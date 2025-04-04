@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
 use levenberg_marquardt::{LeastSquaresProblem, LevenbergMarquardt};
-use nalgebra::{ComplexField, Matrix3, Owned, Vector, Vector3, U3};
+use nalgebra::{ComplexField, Matrix3, Owned, Vector3, U3};
 
 use crate::kepler_orbit::Orbit;
 
@@ -70,7 +70,7 @@ pub fn calculate_transfers(
     tf: f64,
     tstep: f64,
     mu: f64,
-) -> (Vec<f64>, Vec<f64>) {
+) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
     let transfer_orbit = Orbit::new_ap_pe(r1.norm(), r2.norm(), mu);
 
     let guess = Vector3::new((r1.norm() + r2.norm()) / 2.0, PI / 2.0, PI / 2.0);
@@ -81,6 +81,8 @@ pub fn calculate_transfers(
 
     let mut times1 = vec![];
     let mut a1 = vec![];
+    let mut alpha1 = vec![];
+    let mut beta1 = vec![];
 
     while dt < tf {
         solver.dt = dt;
@@ -91,11 +93,15 @@ pub fn calculate_transfers(
         }
         times1.push(dt);
         a1.push(solver.v.x);
+        alpha1.push(solver.v.y);
+        beta1.push(solver.v.z);
         dt += tstep;
     }
 
     let mut times2 = vec![];
     let mut a2 = vec![];
+    let mut alpha2 = vec![];
+    let mut beta2 = vec![];
     dt = tguess;
     while dt > t0 {
         solver.dt = dt;
@@ -106,14 +112,22 @@ pub fn calculate_transfers(
         }
         times2.push(dt);
         a2.push(solver.v.x);
+        alpha2.push(solver.v.y);
+        beta2.push(solver.v.z);
         dt -= tstep;
     }
+
     times2.reverse();
     a2.reverse();
+    alpha2.reverse();
+    beta2.reverse();
+
     times2.append(&mut times1);
     a2.append(&mut a1);
+    alpha2.append(&mut alpha1);
+    beta2.append(&mut beta1);
 
-    (times2, a2)
+    (times2, a2, alpha2, beta2)
 }
 
 pub fn solve_velocities(
@@ -129,8 +143,8 @@ pub fn solve_velocities(
     let z = (mu / (4.0 * a)).sqrt() / (beta / 2.0).tan();
     let y = (mu / (4.0 * a)).sqrt() / (alpha / 2.0).tan();
 
-    let v1 = (z - y) * r_c + (z - y) * r1 / r1.norm();
-    let v2 = (z - y) * r_c + (z - y) * r2 / r2.norm();
+    let v1 = (z - y) * r_c / r_c.norm() + (z - y) * r1 / r1.norm();
+    let v2 = (z - y) * r_c / r_c.norm() - (z - y) * r2 / r2.norm();
 
     (v1, v2)
 }
