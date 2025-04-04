@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
 use levenberg_marquardt::{LeastSquaresProblem, LevenbergMarquardt};
-use nalgebra::{ComplexField, Matrix3, Owned, Vector3, U3};
+use nalgebra::{ComplexField, Matrix3, Owned, Vector, Vector3, U3};
 
 use crate::kepler_orbit::Orbit;
 
@@ -114,4 +114,23 @@ pub fn calculate_transfers(
     a2.append(&mut a1);
 
     (times2, a2)
+}
+
+pub fn solve_velocities(
+    r1: Vector3<f64>,
+    r2: Vector3<f64>,
+    a: f64,
+    alpha: f64,
+    beta: f64,
+    mu: f64,
+) -> (Vector3<f64>, Vector3<f64>) {
+    let r_c = r2 - r1;
+
+    let z = (mu / (4.0 * a)).sqrt() / (beta / 2.0).tan();
+    let y = (mu / (4.0 * a)).sqrt() / (alpha / 2.0).tan();
+
+    let v1 = (z - y) * r_c + (z - y) * r1 / r1.norm();
+    let v2 = (z - y) * r_c + (z - y) * r2 / r2.norm();
+
+    (v1, v2)
 }
