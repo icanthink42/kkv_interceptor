@@ -25,7 +25,7 @@ fn main() {
     let target = Orbit::new(r2, v2);
 
     let mut dv = vec![];
-    let (time_vec, v1_vec) = calculate_transfers(kkv, target, tstep, None, max_dv, mu);
+    let (time_vec, v1_vec) = calculate_transfers(&kkv, &target, tstep, None, max_dv, mu);
     for v in v1_vec {
         dv.push((v1 - v).norm())
     }

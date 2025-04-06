@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
 use levenberg_marquardt::LevenbergMarquardt;
-use nalgebra::Vector3;
+use nalgebra::{Normed, Vector3};
 
 use crate::{
     kepler_orbit::Orbit,
@@ -16,8 +16,8 @@ fn minimum_energy_transfer_time(kkv: &Orbit, target: &Orbit, mu: f64) -> f64 {
 }
 
 pub fn calculate_transfers(
-    kkv: Orbit,
-    target: Orbit,
+    kkv: &Orbit,
+    target: &Orbit,
     tstep: f64,
     tmax: Option<f64>,
     dv_max: f64,
@@ -28,14 +28,15 @@ pub fn calculate_transfers(
     } else {
         kkv.period(mu).max(target.period(mu))
     };
-    let mut time = minimum_energy_transfer_time(&kkv, &target, mu);
+    let start_time = minimum_energy_transfer_time(&kkv, &target, mu);
+    let mut time = start_time;
     let lm = LevenbergMarquardt::new();
     let guess = Vector3::new((kkv.r.norm() + target.r.norm()) / 2.0, PI / 2.0, PI / 2.0);
     let mut solver = LambertSolver::new(guess, kkv.r, target.r, time, mu);
     let mut times = vec![];
     let mut velocities = vec![];
 
-    while time <= tmax {
+    while time <= tmax + start_time {
         let target_step = target.propagate_time(time, mu);
 
         solver.r2 = target_step.r;
@@ -53,7 +54,7 @@ pub fn calculate_transfers(
 
         time += tstep;
     }
-    time = minimum_energy_transfer_time(&kkv, &target, mu) - tstep;
+    time = start_time;
     let mut dv = 0.0;
     while dv <= dv_max {
         let target_step = target.propagate_time(time, mu);
@@ -70,11 +71,51 @@ pub fn calculate_transfers(
         times.insert(0, solver.dt);
         dv = (v1 - kkv.v).norm();
 
-        if report.objective_function > 1e-20 {
+        if report.objective_function > 1e-10 {
             dbg!(report);
             break;
         }
         time -= tstep;
     }
     (times, velocities)
+}
+
+struct PossibleIntercept {
+    orbit: Orbit,
+    dv: f64,
+    dt: f64,
+}
+impl PossibleIntercept {
+    fn new(orbit: Orbit, dv: f64, dt: f64) -> Self {
+        Self { orbit, dv, dt }
+    }
+}
+
+pub fn propagate(
+    kkv: Orbit,
+    target: Orbit,
+    tstep: f64,
+    tmax: Option<f64>,
+    dv_max: f64,
+    mu: f64,
+) -> Vec<PossibleIntercept> {
+    let tmax = if let Some(tmax) = tmax {
+        tmax
+    } else {
+        kkv.period(mu).max(target.period(mu))
+    };
+    let mut time = 0.0;
+    let mut intercepts = vec![];
+    while time <= tmax {
+        let new_kkv = kkv.propagate_time(time, mu);
+        let (times, velocities) =
+            calculate_transfers(&new_kkv, &target, tstep, Some(tmax), dv_max, mu);
+        for (dt, velocity) in times.into_iter().zip(velocities) {
+            let dv = (new_kkv.v - velocity).norm();
+            let orbit = Orbit::new(new_kkv.r, velocity);
+            intercepts.push(PossibleIntercept::new(orbit, dv, dt))
+        }
+        time += 1.0;
+    }
+    intercepts
 }
