@@ -71,11 +71,9 @@ pub fn calculate_transfers(
     tstep: f64,
     mu: f64,
 ) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
-    let transfer_orbit = Orbit::new_ap_pe(r1.norm(), r2.norm(), mu);
-
     let guess = Vector3::new((r1.norm() + r2.norm()) / 2.0, PI / 2.0, PI / 2.0);
     let lm = LevenbergMarquardt::new();
-    let tguess = transfer_orbit.period / 2.0;
+    let tguess = 1.0;
     let mut dt = tguess;
     let mut solver = LambertSolver::new(guess, r1, r2, dt, mu);
 
@@ -157,11 +155,9 @@ pub fn calculate_transfers_inside_dv(
     tstep: f64,
     mu: f64,
 ) -> (Vec<f64>, Vec<Vector3<f64>>) {
-    let transfer_orbit = Orbit::new_ap_pe(r1.norm(), r2.norm(), mu);
-
     let guess = Vector3::new((r1.norm() + r2.norm()) / 2.0, PI / 2.0, PI / 2.0);
     let lm = LevenbergMarquardt::new();
-    let tguess = transfer_orbit.period / 2.0;
+    let tguess = 1.0;
     let mut dt = tguess;
     let mut solver = LambertSolver::new(guess, r1, r2, dt, mu);
 

@@ -1,11 +1,12 @@
 use std::time::Instant;
 
-use lambert_solver::{calculate_transfers, calculate_transfers_inside_dv, solve_velocities};
+use lambert_solver::calculate_transfers_inside_dv;
 use nalgebra::Vector3;
 use plotly::{Plot, Scatter};
 
 mod kepler_orbit;
 mod lambert_solver;
+mod orbit_propagator;
 
 fn main() {
     let start = Instant::now();
