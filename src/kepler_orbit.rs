@@ -1,13 +1,14 @@
 use std::f64::consts::PI;
 
 use levenberg_marquardt::{LeastSquaresProblem, LevenbergMarquardt};
-use nalgebra::{Matrix3, Normed, Owned, Vector1, Vector3, U1};
+use nalgebra::{Matrix3, Owned, Vector1, Vector3, U1};
 
 pub struct Orbit {
     pub r: Vector3<f64>,
     pub v: Vector3<f64>,
 }
 
+#[allow(dead_code)]
 impl Orbit {
     pub fn new(r: Vector3<f64>, v: Vector3<f64>) -> Self {
         Self { r, v }
@@ -56,7 +57,7 @@ impl Orbit {
             2.0 * PI - (e.dot(&self.r) / (e.norm() * self.r.norm())).acos()
         }
     }
-    pub fn v_r(&self, mu: f64) -> f64 {
+    pub fn v_r(&self) -> f64 {
         self.v.dot(&(self.r / self.r.norm()))
     }
 
@@ -76,7 +77,6 @@ impl Orbit {
         let lm = LevenbergMarquardt::new();
         let solver = EccentricAnomalySolver {
             e,
-            mu,
             period: self.period(mu),
             time,
             v: Vector1::new(PI),
@@ -130,7 +130,6 @@ impl Orbit {
 
 pub struct EccentricAnomalySolver {
     pub v: Vector1<f64>,
-    mu: f64,
     period: f64,
     time: f64,
     e: f64,
