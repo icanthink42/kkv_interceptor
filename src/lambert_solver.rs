@@ -1,14 +1,10 @@
-use std::f64::consts::PI;
-
-use levenberg_marquardt::{LeastSquaresProblem, LevenbergMarquardt};
+use levenberg_marquardt::LeastSquaresProblem;
 use nalgebra::{ComplexField, Matrix3, Owned, Vector3, U3};
-
-use crate::kepler_orbit::Orbit;
 
 pub struct LambertSolver {
     pub v: Vector3<f64>,
-    r1: Vector3<f64>,
-    r2: Vector3<f64>,
+    pub r1: Vector3<f64>,
+    pub r2: Vector3<f64>,
     pub dt: f64,
     mu: f64,
 }
@@ -27,7 +23,6 @@ impl LeastSquaresProblem<f64, U3, U3> for LambertSolver {
             -self.dt + (a.powi(3) / self.mu).sqrt() * ((alpha - beta) - (alpha.sin() - beta.sin()));
         let eq2 = -(alpha / 2.0).sin() + (s / (2.0 * a)).sqrt();
         let eq3 = -(beta / 2.0).sin() + ((s - c) / (2.0 * a)).sqrt();
-
         Some(Vector3::new(eq1, eq2, eq3))
     }
     fn jacobian(&self) -> Option<nalgebra::Matrix<f64, U3, U3, Self::JacobianStorage>> {
@@ -63,71 +58,6 @@ impl LambertSolver {
     }
 }
 
-pub fn calculate_transfers(
-    r1: Vector3<f64>,
-    r2: Vector3<f64>,
-    t0: f64,
-    tf: f64,
-    tstep: f64,
-    mu: f64,
-) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
-    let guess = Vector3::new((r1.norm() + r2.norm()) / 2.0, PI / 2.0, PI / 2.0);
-    let lm = LevenbergMarquardt::new();
-    let tguess = 1.0;
-    let mut dt = tguess;
-    let mut solver = LambertSolver::new(guess, r1, r2, dt, mu);
-
-    let mut times1 = vec![];
-    let mut a1 = vec![];
-    let mut alpha1 = vec![];
-    let mut beta1 = vec![];
-
-    while dt < tf {
-        solver.dt = dt;
-        let (updated_solver, report) = lm.minimize(solver);
-        solver = updated_solver;
-        if report.number_of_evaluations > 15 {
-            break;
-        }
-        times1.push(dt);
-        a1.push(solver.v.x);
-        alpha1.push(solver.v.y);
-        beta1.push(solver.v.z);
-        dt += tstep;
-    }
-
-    let mut times2 = vec![];
-    let mut a2 = vec![];
-    let mut alpha2 = vec![];
-    let mut beta2 = vec![];
-    dt = tguess;
-    while dt > t0 {
-        solver.dt = dt;
-        let (updated_solver, report) = lm.minimize(solver);
-        solver = updated_solver;
-        if report.number_of_evaluations > 15 {
-            break;
-        }
-        times2.push(dt);
-        a2.push(solver.v.x);
-        alpha2.push(solver.v.y);
-        beta2.push(solver.v.z);
-        dt -= tstep;
-    }
-
-    times2.reverse();
-    a2.reverse();
-    alpha2.reverse();
-    beta2.reverse();
-
-    times2.append(&mut times1);
-    a2.append(&mut a1);
-    alpha2.append(&mut alpha1);
-    beta2.append(&mut beta1);
-
-    (times2, a2, alpha2, beta2)
-}
-
 pub fn solve_velocities(
     r1: Vector3<f64>,
     r2: Vector3<f64>,
@@ -145,66 +75,4 @@ pub fn solve_velocities(
     let v2 = (z - y) * r_c / r_c.norm() - (z - y) * r2 / r2.norm();
 
     (v1, v2)
-}
-
-pub fn calculate_transfers_inside_dv(
-    r1: Vector3<f64>,
-    v1: Vector3<f64>,
-    r2: Vector3<f64>,
-    max_dv: f64,
-    tstep: f64,
-    mu: f64,
-) -> (Vec<f64>, Vec<Vector3<f64>>) {
-    let guess = Vector3::new((r1.norm() + r2.norm()) / 2.0, PI / 2.0, PI / 2.0);
-    let lm = LevenbergMarquardt::new();
-    let tguess = 1.0;
-    let mut dt = tguess;
-    let mut solver = LambertSolver::new(guess, r1, r2, dt, mu);
-
-    let mut times1 = vec![];
-    let mut v1_vec1: Vec<Vector3<f64>> = vec![];
-    let mut v1_i = v1.clone();
-
-    while (v1_i - v1).norm() <= max_dv {
-        solver.dt = dt;
-        let (updated_solver, report) = lm.minimize(solver);
-        solver = updated_solver;
-        if report.number_of_evaluations > 15 {
-            break;
-        }
-        let (v, _) = solve_velocities(r1, r2, solver.v.x, solver.v.y, solver.v.z, mu);
-        v1_i = v;
-
-        times1.push(dt);
-        v1_vec1.push(v1_i);
-        dt += tstep;
-    }
-
-    let mut times2 = vec![];
-    let mut v1_vec2: Vec<Vector3<f64>> = vec![];
-    dt = tguess;
-    v1_i = v1.clone();
-
-    while (v1_i - v1).norm() <= max_dv {
-        solver.dt = dt;
-        let (updated_solver, report) = lm.minimize(solver);
-        solver = updated_solver;
-        if report.number_of_evaluations > 15 {
-            break;
-        }
-        let (v, _) = solve_velocities(r1, r2, solver.v.x, solver.v.y, solver.v.z, mu);
-        v1_i = v;
-
-        times2.push(dt);
-        v1_vec2.push(v1_i);
-        dt -= tstep;
-    }
-
-    times2.reverse();
-    v1_vec2.reverse();
-
-    times2.append(&mut times1);
-    v1_vec2.append(&mut v1_vec1);
-
-    (times2, v1_vec2)
 }

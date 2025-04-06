@@ -4,8 +4,8 @@ use levenberg_marquardt::{LeastSquaresProblem, LevenbergMarquardt};
 use nalgebra::{Matrix3, Normed, Owned, Vector1, Vector3, U1};
 
 pub struct Orbit {
-    r: Vector3<f64>,
-    v: Vector3<f64>,
+    pub r: Vector3<f64>,
+    pub v: Vector3<f64>,
 }
 
 impl Orbit {
@@ -61,7 +61,8 @@ impl Orbit {
     }
 
     pub fn period(&self, mu: f64) -> f64 {
-        (2.0 * PI / mu) * (self.h().norm() / (1.0 - self.e(mu).norm().powi(2)).sqrt()).powi(3)
+        (2.0 * PI / mu.powi(2))
+            * (self.h().norm() / (1.0 - self.e(mu).norm().powi(2)).sqrt()).powi(3)
     }
 
     pub fn time_at(&self, theta: f64, mu: f64) -> f64 {
