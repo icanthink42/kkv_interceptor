@@ -3,6 +3,7 @@ use std::f64::consts::PI;
 use levenberg_marquardt::{LeastSquaresProblem, LevenbergMarquardt};
 use nalgebra::{Matrix3, Owned, Vector1, Vector3, U1};
 
+#[derive(Debug)]
 pub struct Orbit {
     pub r: Vector3<f64>,
     pub v: Vector3<f64>,
