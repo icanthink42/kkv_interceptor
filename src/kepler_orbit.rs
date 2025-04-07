@@ -97,6 +97,10 @@ impl Orbit {
     }
 
     pub fn propagate_time(&self, time: f64, mu: f64) -> Orbit {
+        let (r, v) = self.propagate_time_xyz(time, mu);
+        Orbit::new(r, v)
+    }
+    pub fn propagate_time_xyz(&self, time: f64, mu: f64) -> (Vector3<f64>, Vector3<f64>) {
         let h = self.h();
         let e = self.e(mu);
 
@@ -123,8 +127,7 @@ impl Orbit {
         let v_theta_new = (mu / h.norm()) * (1.0 + e.norm() * new_theta.cos());
 
         let v_newpqw = rthetaz_pqw * Vector3::new(v_r_new, v_theta_new, 0.0);
-
-        Orbit::new(pqw_ijk * r_newpqw, pqw_ijk * v_newpqw)
+        (pqw_ijk * r_newpqw, pqw_ijk * v_newpqw)
     }
 }
 

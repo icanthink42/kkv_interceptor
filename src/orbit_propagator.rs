@@ -1,4 +1,4 @@
-use std::f64::consts::PI;
+use std::{f64::consts::PI, rc::Rc};
 
 use levenberg_marquardt::LevenbergMarquardt;
 use nalgebra::{Normed, Vector3};
@@ -81,13 +81,48 @@ pub fn calculate_transfers(
 }
 
 struct PossibleIntercept {
-    orbit: Orbit,
-    dv: f64,
+    orbit: Rc<Orbit>,
+    dv: Vector3<f64>,
     dt: f64,
 }
+
 impl PossibleIntercept {
-    fn new(orbit: Orbit, dv: f64, dt: f64) -> Self {
-        Self { orbit, dv, dt }
+    fn new(orbit: Orbit, dv: Vector3<f64>, dt: f64) -> Self {
+        Self {
+            orbit: orbit.into(),
+            dv,
+            dt,
+        }
+    }
+
+    pub fn add_error(self, dv_error: Vector3<f64>) {}
+}
+
+struct InterceptError {
+    ideal_orbit: Rc<Orbit>,
+    error_orbit: Orbit,
+    dv: Vector3<f64>,
+    dt: f64,
+}
+
+impl InterceptError {
+    pub fn from_intercept(
+        intercept: &PossibleIntercept,
+        r_error: Vector3<f64>,
+        v_error: Vector3<f64>,
+    ) -> Self {
+        Self {
+            error_orbit: Orbit::new(intercept.orbit.r + r_error, intercept.orbit.v + v_error),
+            ideal_orbit: intercept.orbit.clone(),
+            dv: intercept.dv,
+            dt: intercept.dt,
+        }
+    }
+
+    pub fn dx(&self, mu: f64) -> Vector3<f64> {
+        let (ideal, _) = self.ideal_orbit.propagate_time_xyz(self.dt, mu);
+        let (error, _) = self.error_orbit.propagate_time_xyz(self.dt, mu);
+        ideal - error
     }
 }
 
@@ -111,7 +146,7 @@ pub fn propagate(
         let (times, velocities) =
             calculate_transfers(&new_kkv, &target, tstep, Some(tmax), dv_max, mu);
         for (dt, velocity) in times.into_iter().zip(velocities) {
-            let dv = (new_kkv.v - velocity).norm();
+            let dv = new_kkv.v - velocity;
             let orbit = Orbit::new(new_kkv.r, velocity);
             intercepts.push(PossibleIntercept::new(orbit, dv, dt))
         }
