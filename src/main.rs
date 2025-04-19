@@ -13,8 +13,11 @@ mod orbit_propagator;
 async fn main() {
     let start = Instant::now();
 
-    let max_dv = 0.0;
+    let max_dv = 5000.0;
     let kill_v = 3.0e3;
+    let dv_error_mean = 1.0;
+    let dv_error_stdev = 1.0;
+
     let mu = 398600e9;
     let tstep = 100.0;
     let tstepmin = 1.0;
@@ -30,7 +33,17 @@ async fn main() {
     let target = Orbit::new(r2, v2);
 
     let intercept = minimize_x_error::<ITER>(
-        kkv, target, tstep, tstepmin, tstepdiv, None, max_dv, kill_v, mu,
+        kkv,
+        target,
+        tstep,
+        tstepmin,
+        tstepdiv,
+        None,
+        max_dv,
+        kill_v,
+        dv_error_mean,
+        dv_error_stdev,
+        mu,
     )
     .await;
 

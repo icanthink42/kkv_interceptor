@@ -9,4 +9,6 @@ levenberg-marquardt = "0.14.0"
 nalgebra = "0.33.2"
 parking_lot = "0.12.3"
 plotly = "0.12.1"
+rand = "0.9.1"
+rand_distr = "0.5.1"
 tokio = { version = "1.44.2",  features = ["full"]}

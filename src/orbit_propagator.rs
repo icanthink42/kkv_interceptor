@@ -4,7 +4,7 @@ use std::{f64::consts::PI, sync::Arc};
 use tokio::task::spawn;
 
 use levenberg_marquardt::LevenbergMarquardt;
-use nalgebra::Vector3;
+use nalgebra::{Normed, Vector3};
 
 use crate::{
     kepler_orbit::Orbit,
@@ -54,7 +54,7 @@ pub fn calculate_transfers(
 
         let dv = (v1 - kkv.v).norm();
         let intercept_v = (v2 - target.v).norm();
-        if report.number_of_evaluations <= 15 && dv < dv_max && intercept_v >= kill_velocity {
+        if report.number_of_evaluations <= 15 && dv <= dv_max && intercept_v >= kill_velocity {
             start_velocities.push(v1);
             end_velocities.push(v1);
             times.push(solver.dt);
@@ -62,8 +62,14 @@ pub fn calculate_transfers(
 
         time += tstep;
     }
+
+    let (updated_solver, _) = lm.minimize(solver);
+    solver = updated_solver;
+    let (starting_v1, _) =
+        solve_velocities(kkv.r, target.r, solver.v.x, solver.v.y, solver.v.z, mu);
+
     time = start_time;
-    let mut dv = 0.0;
+    let mut dv = (starting_v1 - kkv.v).norm();
     while dv <= dv_max {
         let target_step = target.propagate_time(time, mu);
 
@@ -76,7 +82,7 @@ pub fn calculate_transfers(
             solve_velocities(kkv.r, target_step.r, solver.v.x, solver.v.y, solver.v.z, mu);
 
         let intercept_v = (v2 - target.v).norm();
-        if intercept_v >= kill_velocity {
+        if intercept_v >= kill_velocity && dv <= dv_max {
             start_velocities.insert(0, v1);
             end_velocities.insert(0, v2);
             times.insert(0, solver.dt);
@@ -240,6 +246,6 @@ async fn async_transfer(
     }
     let mut t = tasks_completed.lock();
     *t += 1;
-    println!("{},{}", t, total_tasks.lock());
+    // println!("{},{}", t, total_tasks.lock());
     intercepts
 }
