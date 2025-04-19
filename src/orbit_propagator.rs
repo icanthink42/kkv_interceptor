@@ -1,5 +1,6 @@
 use core::f64;
-use std::{f64::consts::PI, rc::Rc, sync::Arc};
+use parking_lot::Mutex;
+use std::{f64::consts::PI, sync::Arc};
 use tokio::task::spawn;
 
 use levenberg_marquardt::LevenbergMarquardt;
@@ -23,8 +24,9 @@ pub fn calculate_transfers(
     tstep: f64,
     tmax: Option<f64>,
     dv_max: f64,
+    kill_velocity: f64,
     mu: f64,
-) -> (Vec<f64>, Vec<Vector3<f64>>) {
+) -> (Vec<f64>, Vec<Vector3<f64>>, Vec<Vector3<f64>>) {
     let tmax = if let Some(tmax) = tmax {
         tmax
     } else {
@@ -36,7 +38,8 @@ pub fn calculate_transfers(
     let guess = Vector3::new((kkv.r.norm() + target.r.norm()) / 2.0, PI / 2.0, PI / 2.0);
     let mut solver = LambertSolver::new(guess, kkv.r, target.r, time, mu);
     let mut times = vec![];
-    let mut velocities = vec![];
+    let mut start_velocities = vec![];
+    let mut end_velocities = vec![];
 
     while time <= tmax + start_time {
         let target_step = target.propagate_time(time, mu);
@@ -46,11 +49,14 @@ pub fn calculate_transfers(
         let (updated_solver, report) = lm.minimize(solver);
         solver = updated_solver;
 
-        let (v1, _) =
+        let (v1, v2) =
             solve_velocities(kkv.r, target_step.r, solver.v.x, solver.v.y, solver.v.z, mu);
 
-        if report.number_of_evaluations <= 15 {
-            velocities.push(v1);
+        let dv = (v1 - kkv.v).norm();
+        let intercept_v = (v2 - target.v).norm();
+        if report.number_of_evaluations <= 15 && dv < dv_max && intercept_v >= kill_velocity {
+            start_velocities.push(v1);
+            end_velocities.push(v1);
             times.push(solver.dt);
         }
 
@@ -66,42 +72,50 @@ pub fn calculate_transfers(
         let (updated_solver, report) = lm.minimize(solver);
         solver = updated_solver;
 
-        let (v1, _) =
+        let (v1, v2) =
             solve_velocities(kkv.r, target_step.r, solver.v.x, solver.v.y, solver.v.z, mu);
 
-        velocities.insert(0, v1);
-        times.insert(0, solver.dt);
+        let intercept_v = (v2 - target.v).norm();
+        if intercept_v >= kill_velocity {
+            start_velocities.insert(0, v1);
+            end_velocities.insert(0, v2);
+            times.insert(0, solver.dt);
+        }
         dv = (v1 - kkv.v).norm();
 
-        if report.objective_function > 1e-10 {
+        if report.number_of_evaluations > 15 {
             break;
         }
         time -= tstep;
     }
-    (times, velocities)
+    (times, start_velocities, end_velocities)
 }
 
 pub struct PossibleIntercept {
     pub orbit: Arc<Orbit>,
     pub dv: Vector3<f64>,
     pub dt: f64,
+    pub burn_time: f64,
 }
 
 impl PossibleIntercept {
-    fn new(orbit: Orbit, dv: Vector3<f64>, dt: f64) -> Self {
+    fn new(orbit: Orbit, dv: Vector3<f64>, dt: f64, burn_time: f64) -> Self {
         Self {
             orbit: orbit.into(),
             dv,
             dt,
+            burn_time,
         }
     }
 }
 
+#[derive(Debug)]
 pub struct InterceptError<const COUNT: usize> {
-    ideal_orbit: Arc<Orbit>,
-    error_orbit: [Orbit; COUNT],
-    dv: Vector3<f64>,
-    dt: f64,
+    pub ideal_orbit: Arc<Orbit>,
+    pub error_orbit: [Orbit; COUNT],
+    pub dv: Vector3<f64>,
+    pub dt: f64,
+    pub burn_time: f64,
 }
 
 impl<const COUNT: usize> InterceptError<COUNT> {
@@ -122,6 +136,7 @@ impl<const COUNT: usize> InterceptError<COUNT> {
             ideal_orbit: intercept.orbit.clone(),
             dv: intercept.dv,
             dt: intercept.dt,
+            burn_time: intercept.burn_time,
         }
     }
 
@@ -137,6 +152,7 @@ impl<const COUNT: usize> InterceptError<COUNT> {
             ideal_orbit: intercept.orbit.clone(),
             dv: intercept.dv,
             dt: intercept.dt,
+            burn_time: intercept.burn_time,
         }
     }
 
@@ -157,22 +173,20 @@ impl<const COUNT: usize> InterceptError<COUNT> {
 }
 
 pub async fn propagate(
-    kkv: Orbit,
-    target: Orbit,
+    kkv: &Orbit,
+    target: Arc<Orbit>,
     tstep: f64,
-    tmax: Option<f64>,
+    tmin: f64,
+    tmax: f64,
     dv_max: f64,
+    kill_velocity: f64,
     mu: f64,
 ) -> Vec<PossibleIntercept> {
-    let tmax = if let Some(tmax) = tmax {
-        tmax
-    } else {
-        kkv.period(mu).max(target.period(mu))
-    };
-    let target = Arc::new(target);
-    let mut time = 0.0;
+    let mut time = tmin;
     let mut tasks = vec![];
     let mut intercepts = vec![];
+    let tasks_completed = Arc::new(Mutex::new(0));
+    let total_tasks = Arc::new(Mutex::new(0));
     while time <= tmax {
         let new_kkv = kkv.propagate_time(time, mu);
         let task = spawn(async_transfer(
@@ -181,17 +195,18 @@ pub async fn propagate(
             tstep,
             tmax,
             dv_max,
+            time,
+            tasks_completed.clone(),
+            total_tasks.clone(),
+            kill_velocity,
             mu,
         ));
         tasks.push(task);
         time += 1.0;
     }
-    let mut i = 0;
-    let i_max = tasks.len();
+    *total_tasks.lock() = tasks.len();
     for task in tasks {
-        dbg!(i as f32 / i_max as f32);
         intercepts.append(&mut task.await.unwrap());
-        i += 1;
     }
     intercepts
 }
@@ -202,14 +217,29 @@ async fn async_transfer(
     tstep: f64,
     tmax: f64,
     dv_max: f64,
+    burn_time: f64,
+    tasks_completed: Arc<Mutex<usize>>,
+    total_tasks: Arc<Mutex<usize>>,
+    kill_velocity: f64,
     mu: f64,
 ) -> Vec<PossibleIntercept> {
     let mut intercepts = vec![];
-    let (times, velocities) = calculate_transfers(&new_kkv, &target, tstep, Some(tmax), dv_max, mu);
-    for (dt, velocity) in times.into_iter().zip(velocities) {
+    let (times, start_velocities, _) = calculate_transfers(
+        &new_kkv,
+        &target,
+        tstep,
+        Some(tmax),
+        dv_max,
+        kill_velocity,
+        mu,
+    );
+    for (dt, velocity) in times.into_iter().zip(start_velocities) {
         let dv = new_kkv.v - velocity;
         let orbit = Orbit::new(new_kkv.r, velocity);
-        intercepts.push(PossibleIntercept::new(orbit, dv, dt));
+        intercepts.push(PossibleIntercept::new(orbit, dv, dt, burn_time));
     }
+    let mut t = tasks_completed.lock();
+    *t += 1;
+    println!("{},{}", t, total_tasks.lock());
     intercepts
 }
