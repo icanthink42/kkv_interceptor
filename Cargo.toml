@@ -6,9 +6,10 @@ edition = "2021"
 [dependencies]
 approx = "0.5.1"
 levenberg-marquardt = "0.14.0"
-nalgebra = "0.33.2"
+nalgebra = { version = "0.33.2", features=["serde-serialize"] }
 parking_lot = "0.12.3"
 plotly = "0.12.1"
 rand = "0.9.1"
 rand_distr = "0.5.1"
+serde_json = "1.0.140"
 tokio = { version = "1.44.2",  features = ["full"]}

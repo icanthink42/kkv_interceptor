@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{process::Command, time::Instant};
 
 use kepler_orbit::Orbit;
 use montecarlo::minimize_x_error;
@@ -52,7 +52,14 @@ async fn main() {
     dbg!(intercept.dx(mu).iter().map(|x| x.norm()).sum::<f64>() / ITER as f64);
 
     let time = start.elapsed();
-    println!("{:.2}ms", time.as_millis());
+    println!("{:.2}s", time.as_secs());
+    let (t, r, _) = intercept.ideal_orbit.plot_orbit(1000, mu);
+    let v = serde_json::to_string(&(t, r)).unwrap();
+    let _ = Command::new("python")
+        .arg("plot.py")
+        .arg(v)
+        .output()
+        .unwrap();
 
     //let mut plot = Plot::new();
     //let trace = Scatter::new(dv, time_vec);

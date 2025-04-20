@@ -1,3 +1,4 @@
+use core::f64;
 use std::f64::consts::PI;
 
 use levenberg_marquardt::{LeastSquaresProblem, LevenbergMarquardt};
@@ -129,6 +130,22 @@ impl Orbit {
 
         let v_newpqw = rthetaz_pqw * Vector3::new(v_r_new, v_theta_new, 0.0);
         (pqw_ijk * r_newpqw, pqw_ijk * v_newpqw)
+    }
+    pub fn plot_orbit(&self, n: i32, mu: f64) -> (Vec<f64>, Vec<Vector3<f64>>, Vec<Vector3<f64>>) {
+        let dt = self.period(mu) / n as f64;
+        let t = 0.0;
+
+        let mut times = vec![];
+        let mut rs = vec![];
+        let mut vs = vec![];
+
+        while t < dt {
+            let (r, v) = self.propagate_time_xyz(t, mu);
+            times.push(t);
+            rs.push(r);
+            vs.push(v);
+        }
+        (times, rs, vs)
     }
 }
 

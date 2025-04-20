@@ -441,6 +441,7 @@ dependencies = [
  "num-complex",
  "num-rational",
  "num-traits",
+ "serde",
  "simba",
  "typenum",
 ]
@@ -483,6 +484,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495"
 dependencies = [
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -955,6 +957,7 @@ dependencies = [
  "plotly",
  "rand 0.9.1",
  "rand_distr",
+ "serde_json",
  "tokio",
 ]
 
