@@ -4,7 +4,7 @@ use std::{f64::consts::PI, sync::Arc};
 use tokio::task::spawn;
 
 use levenberg_marquardt::LevenbergMarquardt;
-use nalgebra::{Normed, Vector3};
+use nalgebra::Vector3;
 
 use crate::{
     kepler_orbit::Orbit,

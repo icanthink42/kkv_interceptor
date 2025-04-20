@@ -132,18 +132,20 @@ impl Orbit {
         (pqw_ijk * r_newpqw, pqw_ijk * v_newpqw)
     }
     pub fn plot_orbit(&self, n: i32, mu: f64) -> (Vec<f64>, Vec<Vector3<f64>>, Vec<Vector3<f64>>) {
-        let dt = self.period(mu) / n as f64;
-        let t = 0.0;
+        let period = self.period(mu);
+        let dt = period / n as f64;
+        let mut t = 0.0;
 
         let mut times = vec![];
         let mut rs = vec![];
         let mut vs = vec![];
 
-        while t < dt {
+        while t < period {
             let (r, v) = self.propagate_time_xyz(t, mu);
             times.push(t);
             rs.push(r);
             vs.push(v);
+            t += dt;
         }
         (times, rs, vs)
     }

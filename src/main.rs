@@ -1,8 +1,9 @@
-use std::{process::Command, time::Instant};
+use std::{fs::OpenOptions, process::Command, time::Instant};
 
 use kepler_orbit::Orbit;
 use montecarlo::minimize_x_error;
 use nalgebra::Vector3;
+use serde_pickle::SerOptions;
 
 mod kepler_orbit;
 mod lambert_solver;
@@ -12,11 +13,12 @@ mod orbit_propagator;
 #[tokio::main]
 async fn main() {
     let start = Instant::now();
+    let save_file_path = "data.orbit";
 
     let max_dv = 3500.0;
     let kill_v = 3.0e3;
     let dv_error_mean = 0.0;
-    let dv_error_stdev = 5.0;
+    let dv_error_stdev = 1.0;
 
     let mu = 398600e9;
     let tstep = 100.0;
@@ -54,12 +56,19 @@ async fn main() {
     let time = start.elapsed();
     println!("{:.2}s", time.as_secs());
     let (t, r, _) = intercept.ideal_orbit.plot_orbit(1000, mu);
-    let v = serde_json::to_string(&(t, r)).unwrap();
-    let _ = Command::new("python")
+    let mut data_file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(save_file_path)
+        .unwrap();
+    let serde_options = SerOptions::new();
+    serde_pickle::to_writer(&mut data_file, &(t, r), serde_options).unwrap();
+    let out = Command::new("python")
         .arg("plot.py")
-        .arg(v)
+        .arg(save_file_path)
         .output()
         .unwrap();
+    dbg!(out);
 
     //let mut plot = Plot::new();
     //let trace = Scatter::new(dv, time_vec);
