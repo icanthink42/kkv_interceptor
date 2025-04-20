@@ -13,16 +13,16 @@ mod orbit_propagator;
 async fn main() {
     let start = Instant::now();
 
-    let max_dv = 5000.0;
+    let max_dv = 3500.0;
     let kill_v = 3.0e3;
-    let dv_error_mean = 1.0;
-    let dv_error_stdev = 1.0;
+    let dv_error_mean = 0.0;
+    let dv_error_stdev = 5.0;
 
     let mu = 398600e9;
     let tstep = 100.0;
     let tstepmin = 1.0;
     let tstepdiv = 10.0;
-    const ITER: usize = 10;
+    const ITER: usize = 100;
 
     let r1 = Vector3::new(3500.0e3, 6805.0e3, 2200.0e3);
     let v1 = Vector3::new(-7.511e3, 0.357e3, 4.447e3);
