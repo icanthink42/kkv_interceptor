@@ -15,23 +15,23 @@ async fn main() {
     let start = Instant::now();
     let save_file_path = "data.orbit";
 
-    let max_dv = 3500.0;
-    let kill_v = 3.0e3;
+    let max_dv = 5500.0;
+    let kill_v = 1.0e3;
     let dv_error_mean = 0.0;
     let dv_error_stdev = 1.0;
 
     let mu = 398600e9;
-    let tstep = 100.0;
-    let tstepmin = 1.0;
+    let tstep = 1000.0;
+    let tstepmin = 10.0;
     let tstepdiv = 10.0;
     const ITER: usize = 100;
 
-    let r1 = Vector3::new(3500.0e3, 6805.0e3, 2200.0e3);
-    let v1 = Vector3::new(-7.511e3, 0.357e3, 4.447e3);
+    let r1 = Vector3::new(-4069.5e3, 2861.786e3, 4483.608e3);
+    let v1 = Vector3::new(-5.114e3, -5.691e3, -1.0e3);
     let kkv = Orbit::new(r1, v1);
 
-    let r2 = Vector3::new(-4069.5e3, 2861.786e3, 4483.608e3);
-    let v2 = Vector3::new(-5.114e3, -5.691e3, -1.0e3);
+    let r2 = Vector3::new(3500.0e3, 6805.0e3, 2200.0e3);
+    let v2 = Vector3::new(-7.511e3, 0.357e3, 4.447e3);
     let target = Orbit::new(r2, v2);
 
     let intercept = minimize_x_error::<ITER>(

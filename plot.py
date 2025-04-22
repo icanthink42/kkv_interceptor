@@ -30,6 +30,15 @@ ax.plot(*target_r.T, label="Target Orbit")
 ax.text(*burn_pos, "Transfer Burn")
 ax.text(*intercept_pos, "KKV Impact")
 
+r_e = 6378e3
+u = np.linspace(0, 2 * np.pi, 100)
+v = np.linspace(0, np.pi, 100)
+x = r_e * np.outer(np.cos(u), np.sin(v))
+y = r_e * np.outer(np.sin(u), np.sin(v))
+z = r_e * np.outer(np.ones(np.size(u)), np.cos(v))
+
+ax.plot_wireframe(x, y, z)
+
 ax.set_aspect("equal")
 ax.legend()
 plt.show()
