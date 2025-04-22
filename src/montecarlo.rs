@@ -1,4 +1,4 @@
-use std::{f64::INFINITY, sync::Arc, usize};
+use std::{f64::INFINITY, usize};
 
 use nalgebra::Vector3;
 use rand_distr::{Distribution, Normal};

@@ -125,6 +125,7 @@ pub struct InterceptError<const COUNT: usize> {
 }
 
 impl<const COUNT: usize> InterceptError<COUNT> {
+    #[allow(dead_code)]
     pub fn from_intercept(
         intercept: &PossibleIntercept,
         r_error: [Vector3<f64>; COUNT],
@@ -192,7 +193,6 @@ pub async fn propagate(
     let mut tasks = vec![];
     let mut intercepts = vec![];
     let tasks_completed = Arc::new(Mutex::new(0));
-    let total_tasks = Arc::new(Mutex::new(0));
     while time <= tmax {
         let new_kkv = kkv.propagate_time(time, mu);
         let new_target = target.propagate_time(time, mu);
@@ -204,14 +204,12 @@ pub async fn propagate(
             dv_max,
             time,
             tasks_completed.clone(),
-            total_tasks.clone(),
             kill_velocity,
             mu,
         ));
         tasks.push(task);
         time += 1.0;
     }
-    *total_tasks.lock() = tasks.len();
     for task in tasks {
         intercepts.append(&mut task.await.unwrap());
     }
@@ -226,7 +224,6 @@ async fn async_transfer(
     dv_max: f64,
     burn_time: f64,
     tasks_completed: Arc<Mutex<usize>>,
-    total_tasks: Arc<Mutex<usize>>,
     kill_velocity: f64,
     mu: f64,
 ) -> Vec<PossibleIntercept> {
@@ -247,6 +244,5 @@ async fn async_transfer(
     }
     let mut t = tasks_completed.lock();
     *t += 1;
-    // println!("{},{}", t, total_tasks.lock());
     intercepts
 }

@@ -3,7 +3,6 @@ use std::{fs::OpenOptions, process::Command, time::Instant};
 use kepler_orbit::Orbit;
 use montecarlo::minimize_x_error;
 use nalgebra::Vector3;
-use orbit_propagator::calculate_transfers;
 use serde_pickle::SerOptions;
 
 mod kepler_orbit;
