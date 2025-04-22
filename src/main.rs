@@ -3,6 +3,7 @@ use std::{fs::OpenOptions, process::Command, time::Instant};
 use kepler_orbit::Orbit;
 use montecarlo::minimize_x_error;
 use nalgebra::Vector3;
+use orbit_propagator::calculate_transfers;
 use serde_pickle::SerOptions;
 
 mod kepler_orbit;
@@ -35,8 +36,8 @@ async fn main() {
     let target = Orbit::new(r2, v2);
 
     let intercept = minimize_x_error::<ITER>(
-        kkv,
-        target,
+        kkv.clone(),
+        target.clone(),
         tstep,
         tstepmin,
         tstepdiv,
@@ -55,25 +56,30 @@ async fn main() {
 
     let time = start.elapsed();
     println!("{:.2}s", time.as_secs());
-    let (t, r, _) = intercept.ideal_orbit.plot_orbit(1000, mu);
+    let (intercept_t, intercept_r, _) = intercept.ideal_orbit.plot_orbit(1000, mu);
+    let (kkv_t, kkv_r, _) = kkv.plot_orbit(1000, mu);
+    let (target_t, target_r, _) = target.plot_orbit(1000, mu);
     let mut data_file = OpenOptions::new()
         .create(true)
         .write(true)
         .open(save_file_path)
         .unwrap();
     let serde_options = SerOptions::new();
-    serde_pickle::to_writer(&mut data_file, &(t, r), serde_options).unwrap();
+    let serialized_data = (
+        intercept_t,
+        intercept_r,
+        kkv_t,
+        kkv_r,
+        target_t,
+        target_r,
+        kkv.propagate_time_xyz(intercept.burn_time, mu).0,
+        intercept.ideal_orbit.propagate_time_xyz(intercept.dt, mu).0,
+    );
+    serde_pickle::to_writer(&mut data_file, &serialized_data, serde_options).unwrap();
     let out = Command::new("python")
         .arg("plot.py")
         .arg(save_file_path)
         .output()
         .unwrap();
     dbg!(out);
-
-    //let mut plot = Plot::new();
-    //let trace = Scatter::new(dv, time_vec);
-
-    //plot.add_trace(trace);
-
-    //plot.write_html("out.html");
 }

@@ -29,12 +29,10 @@ pub async fn minimize_x_error<const COUNT: usize>(
     };
     let normal = Normal::new(dv_error_mean, dv_error_stdev).unwrap();
     let mut tstep = tstep;
-    let target = Arc::new(target);
     let mut tmin = 0.0;
     loop {
         dbg!("Completed Iteration");
-        let intercepts =
-            propagate(&kkv, target.clone(), tstep, tmin, tmax, dv_max, kill_v, mu).await;
+        let intercepts = propagate(&kkv, &target, tstep, tmin, tmax, dv_max, kill_v, mu).await;
         let mut tasks = vec![];
         for intercept in intercepts {
             let task = spawn(montecarlo_async(intercept, normal, mu));

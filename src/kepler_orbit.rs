@@ -4,7 +4,7 @@ use std::f64::consts::PI;
 use levenberg_marquardt::{LeastSquaresProblem, LevenbergMarquardt};
 use nalgebra::{Matrix3, Owned, Vector1, Vector3, U1};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Orbit {
     pub r: Vector3<f64>,
     pub v: Vector3<f64>,
@@ -53,7 +53,7 @@ impl Orbit {
 
     pub fn theta(&self, mu: f64) -> f64 {
         let e = self.e(mu);
-        if e.dot(&self.v) >= 0.0 {
+        if self.r.dot(&self.v) >= 0.0 {
             (e.dot(&self.r) / (e.norm() * self.r.norm())).acos()
         } else {
             2.0 * PI - (e.dot(&self.r) / (e.norm() * self.r.norm())).acos()
@@ -71,6 +71,7 @@ impl Orbit {
     pub fn time_at(&self, theta: f64, mu: f64) -> f64 {
         let e = self.e(mu).norm();
         let ecc = 2.0 * (((1.0 - e) / (1.0 + e)).sqrt() * (theta / 2.0).tan()).atan();
+        let ecc = ecc.rem_euclid(2.0 * PI);
         self.period(mu) / (2.0 * PI) * (ecc - e * ecc.sin())
     }
 
@@ -85,6 +86,7 @@ impl Orbit {
         };
         let (updated_solver, _) = lm.minimize(solver);
         let ecc = updated_solver.v.x;
+        let ecc = ecc.rem_euclid(2.0 * PI);
         2.0 * (((1.0 + e) / (1.0 - e)).sqrt() * (ecc / 2.0).tan()).atan()
     }
 

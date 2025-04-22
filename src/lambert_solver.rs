@@ -71,8 +71,8 @@ pub fn solve_velocities(
     let z = (mu / (4.0 * a)).sqrt() / (beta / 2.0).tan();
     let y = (mu / (4.0 * a)).sqrt() / (alpha / 2.0).tan();
 
-    let v1 = (z - y) * r_c / r_c.norm() + (z - y) * r1 / r1.norm();
-    let v2 = (z - y) * r_c / r_c.norm() - (z - y) * r2 / r2.norm();
+    let v1 = (z + y) * r_c / r_c.norm() + (z - y) * r1 / r1.norm();
+    let v2 = (z + y) * r_c / r_c.norm() - (z - y) * r2 / r2.norm();
 
     (v1, v2)
 }

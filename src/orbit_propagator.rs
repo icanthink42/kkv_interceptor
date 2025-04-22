@@ -180,7 +180,7 @@ impl<const COUNT: usize> InterceptError<COUNT> {
 
 pub async fn propagate(
     kkv: &Orbit,
-    target: Arc<Orbit>,
+    target: &Orbit,
     tstep: f64,
     tmin: f64,
     tmax: f64,
@@ -195,9 +195,10 @@ pub async fn propagate(
     let total_tasks = Arc::new(Mutex::new(0));
     while time <= tmax {
         let new_kkv = kkv.propagate_time(time, mu);
+        let new_target = target.propagate_time(time, mu);
         let task = spawn(async_transfer(
             new_kkv,
-            target.clone(),
+            new_target,
             tstep,
             tmax,
             dv_max,
@@ -219,7 +220,7 @@ pub async fn propagate(
 
 async fn async_transfer(
     new_kkv: Orbit,
-    target: Arc<Orbit>,
+    target: Orbit,
     tstep: f64,
     tmax: f64,
     dv_max: f64,
