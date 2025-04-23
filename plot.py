@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import plotly
 import plotly.express as px
-from plotly.graph_objs import Scatter3d
+from plotly.graph_objs import Scatter3d, Surface
 
 ax = plt.figure().add_subplot(projection="3d")
 
@@ -45,7 +45,9 @@ ax.plot_wireframe(x, y, z)
 ax.set_aspect("equal")
 ax.legend()
 
-fig = plotly.graph_objs.Figure()
+fig = plotly.graph_objs.Figure(
+    data=[plotly.graph_objs.Surface(x=x, y=y, z=z, name="Earth", showscale=False)]
+)
 fig.add_trace(
     Scatter3d(
         x=intercept_r.T[0],
@@ -61,6 +63,33 @@ fig.add_trace(
 fig.add_trace(
     Scatter3d(
         x=target_r.T[0], y=target_r.T[1], z=target_r.T[2], mode="lines", name="ICBM"
+    )
+)
+fig.add_trace(
+    Scatter3d(
+        x=[burn_pos[0]],
+        y=[burn_pos[1]],
+        z=[burn_pos[2]],
+        mode="markers+text",
+        text="Transfer Burn",
+        name="Transfer Burn",
+    )
+)
+fig.add_trace(
+    Scatter3d(
+        x=[intercept_pos[0]],
+        y=[intercept_pos[1]],
+        z=[intercept_pos[2]],
+        mode="markers+text",
+        text="KKV Impact",
+        name="KKV Impact",
+    )
+)
+fig.update_layout(
+    scene=dict(
+        xaxis_title="X (m)",
+        yaxis_title="Y (m)",
+        zaxis_title="Z (m)",
     )
 )
 fig.write_html("out.html")
