@@ -71,6 +71,9 @@ pub async fn minimize_x_error<const COUNT: usize>(
         }
         tmax = intercept_errors[min_index].burn_time + tstep;
         tmin = intercept_errors[min_index].burn_time - tstep;
+        if tmin < 0.0 {
+            tmin = 0.0;
+        }
         dbg!(intercept_errors[min_index].burn_time);
         tstep /= tstepdiv;
     }
