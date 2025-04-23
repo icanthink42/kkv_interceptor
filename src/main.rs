@@ -19,6 +19,7 @@ async fn main() {
     let kill_v = 1.0e3;
     let dv_error_mean = 0.0;
     let dv_error_stdev = 1.0;
+    let planet_radius = 6378.0e3;
 
     let mu = 398600e9;
     let tstep = 1000.0;
@@ -31,7 +32,7 @@ async fn main() {
     let kkv = Orbit::new(r1, v1);
 
     let r2 = Vector3::new(3500.0e3, 6805.0e3, 2200.0e3);
-    let v2 = Vector3::new(-7.511e3, 0.357e3, 4.447e3);
+    let v2 = Vector3::new(-0.511e3, 0.357e3, 4.447e3);
     let target = Orbit::new(r2, v2);
 
     let intercept = minimize_x_error::<ITER>(
@@ -45,13 +46,18 @@ async fn main() {
         kill_v,
         dv_error_mean,
         dv_error_stdev,
+        planet_radius,
         mu,
     )
     .await;
 
-    dbg!(intercept.dv.norm());
-    dbg!(intercept.burn_time);
-    dbg!(intercept.dx(mu).iter().map(|x| x.norm()).sum::<f64>() / ITER as f64);
+    let dx = intercept.dx(mu).iter().map(|x| x.norm()).sum::<f64>() / ITER as f64;
+    println!("*Optimal Interception*");
+    println!("Wait Time: {}s", intercept.burn_time);
+    println!("Transfer Time: {}s", intercept.dt);
+    println!("Delta V: {}m/s", intercept.dv.norm());
+    println!("Average Distance: {}", dx);
+    println!("Velocity Change Vector: {}m/s", intercept.dv);
 
     let time = start.elapsed();
     println!("{:.2}s", time.as_secs());
@@ -75,10 +81,9 @@ async fn main() {
         intercept.ideal_orbit.propagate_time_xyz(intercept.dt, mu).0,
     );
     serde_pickle::to_writer(&mut data_file, &serialized_data, serde_options).unwrap();
-    let out = Command::new("python")
+    let _ = Command::new("python")
         .arg("plot.py")
         .arg(save_file_path)
         .output()
         .unwrap();
-    dbg!(out);
 }

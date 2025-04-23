@@ -20,6 +20,7 @@ pub async fn minimize_x_error<const COUNT: usize>(
     kill_v: f64,
     dv_error_mean: f64,
     dv_error_stdev: f64,
+    planet_radius: f64,
     mu: f64,
 ) -> InterceptError<COUNT> {
     let mut tmax = if let Some(tmax) = tmax {
@@ -32,7 +33,18 @@ pub async fn minimize_x_error<const COUNT: usize>(
     let mut tmin = 0.0;
     loop {
         dbg!("Completed Iteration");
-        let intercepts = propagate(&kkv, &target, tstep, tmin, tmax, dv_max, kill_v, mu).await;
+        let intercepts = propagate(
+            &kkv,
+            &target,
+            tstep,
+            tmin,
+            tmax,
+            dv_max,
+            kill_v,
+            planet_radius,
+            mu,
+        )
+        .await;
         let mut tasks = vec![];
         for intercept in intercepts {
             let task = spawn(montecarlo_async(intercept, normal, mu));

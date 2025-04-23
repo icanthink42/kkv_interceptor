@@ -187,6 +187,7 @@ pub async fn propagate(
     tmax: f64,
     dv_max: f64,
     kill_velocity: f64,
+    planet_radius: f64,
     mu: f64,
 ) -> Vec<PossibleIntercept> {
     let mut time = tmin;
@@ -205,6 +206,7 @@ pub async fn propagate(
             time,
             tasks_completed.clone(),
             kill_velocity,
+            planet_radius,
             mu,
         ));
         tasks.push(task);
@@ -225,6 +227,7 @@ async fn async_transfer(
     burn_time: f64,
     tasks_completed: Arc<Mutex<usize>>,
     kill_velocity: f64,
+    planet_radius: f64,
     mu: f64,
 ) -> Vec<PossibleIntercept> {
     let mut intercepts = vec![];
@@ -240,7 +243,9 @@ async fn async_transfer(
     for (dt, velocity) in times.into_iter().zip(start_velocities) {
         let dv = new_kkv.v - velocity;
         let orbit = Orbit::new(new_kkv.r, velocity);
-        intercepts.push(PossibleIntercept::new(orbit, dv, dt, burn_time));
+        if orbit.r_at(0.0, mu) > planet_radius {
+            intercepts.push(PossibleIntercept::new(orbit, dv, dt, burn_time));
+        }
     }
     let mut t = tasks_completed.lock();
     *t += 1;
