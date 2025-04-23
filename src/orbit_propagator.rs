@@ -1,6 +1,6 @@
 use core::f64;
 use parking_lot::Mutex;
-use std::{f64::consts::PI, sync::Arc};
+use std::{f64::consts::PI, future, sync::Arc};
 use tokio::task::spawn;
 
 use levenberg_marquardt::LevenbergMarquardt;
@@ -197,6 +197,9 @@ pub async fn propagate(
     while time <= tmax {
         let new_kkv = kkv.propagate_time(time, mu);
         let new_target = target.propagate_time(time, mu);
+        if new_kkv.r.norm() < planet_radius || new_target.r.norm() < planet_radius {
+            break;
+        }
         let task = spawn(async_transfer(
             new_kkv,
             new_target,
@@ -243,7 +246,8 @@ async fn async_transfer(
     for (dt, velocity) in times.into_iter().zip(start_velocities) {
         let dv = new_kkv.v - velocity;
         let orbit = Orbit::new(new_kkv.r, velocity);
-        if orbit.r_at(0.0, mu) > planet_radius {
+        let future_orbit = orbit.propagate_time(dt, mu);
+        if future_orbit.r.norm() > planet_radius {
             intercepts.push(PossibleIntercept::new(orbit, dv, dt, burn_time));
         }
     }

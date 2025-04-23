@@ -31,8 +31,8 @@ async fn main() {
     let v1 = Vector3::new(-5.114e3, -5.691e3, -1.0e3);
     let kkv = Orbit::new(r1, v1);
 
-    let r2 = Vector3::new(3500.0e3, 6805.0e3, 2200.0e3);
-    let v2 = Vector3::new(-0.511e3, 0.357e3, 4.447e3);
+    let r2 = Vector3::new(-4069.5e3, 2861.786e3, 4483.608e3);
+    let v2 = Vector3::new(-0.114e3, -5.691e3, -1.0e3);
     let target = Orbit::new(r2, v2);
 
     let intercept = minimize_x_error::<ITER>(

@@ -3,6 +3,9 @@ import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
+import plotly
+import plotly.express as px
+from plotly.graph_objs import Scatter3d
 
 ax = plt.figure().add_subplot(projection="3d")
 
@@ -41,4 +44,25 @@ ax.plot_wireframe(x, y, z)
 
 ax.set_aspect("equal")
 ax.legend()
+
+fig = plotly.graph_objs.Figure()
+fig.add_trace(
+    Scatter3d(
+        x=intercept_r.T[0],
+        y=intercept_r.T[1],
+        z=intercept_r.T[2],
+        mode="lines",
+        name="Transfer Orbit",
+    )
+)
+fig.add_trace(
+    Scatter3d(x=kkv_r.T[0], y=kkv_r.T[1], z=kkv_r.T[2], mode="lines", name="KKV")
+)
+fig.add_trace(
+    Scatter3d(
+        x=target_r.T[0], y=target_r.T[1], z=target_r.T[2], mode="lines", name="ICBM"
+    )
+)
+fig.write_html("out.html")
+
 plt.show()
